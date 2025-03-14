@@ -5,11 +5,45 @@ import 'react-quill/dist/quill.snow.css';
 // Dynamically import ReactQuill to avoid server-side rendering issues
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
+// Custom Quill modules configuration
+const modules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    ['clean']
+  ]
+};
+
+// Custom formats allowed in the editor
+const formats = [
+  'header',
+  'bold', 'italic', 'underline',
+  'list', 'bullet'
+];
+
 export default function Editor() {
   const [value, setValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isFormatting, setIsFormatting] = useState(false);
   const [formatError, setFormatError] = useState('');
+  const [fontSize, setFontSize] = useState(16); // Default font size
+
+  // Calculate font size based on content length
+  useEffect(() => {
+    if (value) {
+      const length = value.length;
+      let newSize;
+      if (length < 500) {
+        newSize = 18; // Larger font for shorter content
+      } else if (length < 2000) {
+        newSize = 16; // Medium font for moderate content
+      } else {
+        newSize = 14; // Smaller font for longer content
+      }
+      setFontSize(newSize);
+    }
+  }, [value]);
 
   // Load saved content from localStorage when component mounts
   useEffect(() => {
@@ -41,7 +75,6 @@ export default function Editor() {
     setFormatError('');
 
     try {
-      console.log('Sending format request...');
       const response = await fetch('/api/format', {
         method: 'POST',
         headers: {
@@ -50,35 +83,24 @@ export default function Editor() {
         body: JSON.stringify({ content: value }),
       });
 
-      console.log('Response received:', response.status);
       let data;
-      
       try {
         data = await response.json();
       } catch (parseError) {
-        console.error('JSON parse error:', parseError);
         throw new Error('Failed to parse server response');
       }
 
       if (!response.ok) {
-        console.error('Server error response:', data);
-        throw new Error(
-          data.details || data.error || 'Failed to format content'
-        );
+        throw new Error(data.details || data.error || 'Failed to format content');
       }
 
       if (!data.content || typeof data.content !== 'string') {
-        console.error('Invalid response format:', data);
         throw new Error('Invalid response format from server');
       }
 
       setValue(data.content);
-      console.log('Formatting successful');
     } catch (error) {
-      console.error('Formatting error:', error);
-      setFormatError(
-        error.message || 'An unexpected error occurred while formatting'
-      );
+      setFormatError(error.message || 'An unexpected error occurred while formatting');
     } finally {
       setIsFormatting(false);
     }
@@ -86,7 +108,7 @@ export default function Editor() {
 
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[66ch] mx-auto"> {/* Limit width to 66 characters */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Rall Docs Editor</h1>
           <button
@@ -110,12 +132,50 @@ export default function Editor() {
         )}
 
         {!isLoading && (
-          <div className="prose dark:prose-invert max-w-none">
+          <div 
+            className="prose dark:prose-invert max-w-none"
+            style={{
+              '--editor-font-size': `${fontSize}px`,
+            }}
+          >
+            <style jsx global>{`
+              .ql-editor {
+                font-size: var(--editor-font-size);
+                transition: font-size 0.3s ease;
+                padding: 2rem;
+                min-height: 500px;
+                max-width: 66ch;
+                margin: 0 auto;
+                line-height: 1.6;
+              }
+              .ql-container {
+                border-bottom-left-radius: 0.375rem;
+                border-bottom-right-radius: 0.375rem;
+              }
+              .ql-toolbar {
+                border-top-left-radius: 0.375rem;
+                border-top-right-radius: 0.375rem;
+                background: #f8fafc;
+                border-color: #e2e8f0;
+              }
+              .dark .ql-toolbar {
+                background: #1e293b;
+                border-color: #334155;
+              }
+              .dark .ql-container {
+                border-color: #334155;
+              }
+              .dark .ql-editor {
+                color: #e2e8f0;
+              }
+            `}</style>
             <ReactQuill 
-              theme="snow" 
+              theme="snow"
               value={value} 
               onChange={setValue}
-              className="bg-white dark:bg-gray-800 min-h-[500px] rounded-md"
+              modules={modules}
+              formats={formats}
+              className="bg-white dark:bg-gray-800 rounded-md shadow-sm"
             />
           </div>
         )}
