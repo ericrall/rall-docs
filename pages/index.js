@@ -28,6 +28,9 @@ export default function Home() {
   const [isFormatting, setIsFormatting] = useState(false);
   const [formatError, setFormatError] = useState('');
   const [fontSize, setFontSize] = useState(16); // Default font size
+  const [isAnimating, setIsAnimating] = useState(true);
+  const [visibleChars, setVisibleChars] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(0);
 
   // Calculate font size based on content length
   useEffect(() => {
@@ -44,6 +47,31 @@ export default function Home() {
       setFontSize(newSize);
     }
   }, [value]);
+
+  // Handle the typing animation
+  useEffect(() => {
+    if (isAnimating) {
+      setVisibleChars(0);
+      setCursorPosition(0);
+      const text = 'Rall Docs.';
+      let currentChar = 0;
+
+      const typingInterval = setInterval(() => {
+        if (currentChar <= text.length) {
+          setCursorPosition(currentChar);
+          setVisibleChars(currentChar);
+          currentChar++;
+        } else {
+          clearInterval(typingInterval);
+          setTimeout(() => {
+            setIsAnimating(false);
+          }, 500);
+        }
+      }, 100);
+
+      return () => clearInterval(typingInterval);
+    }
+  }, [isAnimating]);
 
   // Load saved content from localStorage when component mounts
   useEffect(() => {
@@ -109,8 +137,56 @@ export default function Home() {
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 font-['Helvetica'] flex flex-col items-center">
       <div className="w-full max-w-[66ch] mx-auto flex flex-col items-center">
-        <div className="w-full flex justify-center mb-8">
-          <h1 className="text-4xl font-light tracking-wide select-none">Rall Docs.</h1>
+        <div className="w-full flex justify-center mb-32">
+          <h1 
+            className="text-4xl font-light tracking-wide select-none"
+            onMouseEnter={() => setIsAnimating(true)}
+          >
+            <style jsx>{`
+              @keyframes blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0; }
+              }
+              .title-container {
+                position: relative;
+                display: inline-block;
+                padding: 0 1em;
+              }
+              .char {
+                display: inline-block;
+                opacity: 0;
+                transition: opacity 0.1s ease-out;
+              }
+              .char.visible {
+                opacity: 1;
+              }
+              .cursor {
+                position: absolute;
+                top: 0;
+                width: 2px;
+                height: 100%;
+                background-color: currentColor;
+                animation: blink 1s step-end infinite;
+                transition: transform 0.1s ease-out;
+              }
+            `}</style>
+            <span className="title-container">
+              {'Rall Docs.'.split('').map((char, index) => (
+                <span
+                  key={index}
+                  className={`char ${index < visibleChars ? 'visible' : ''}`}
+                >
+                  {char === ' ' ? '\u00A0' : char}
+                </span>
+              ))}
+              <span 
+                className="cursor"
+                style={{
+                  transform: `translateX(${cursorPosition * 0.61}em)`
+                }}
+              />
+            </span>
+          </h1>
         </div>
 
         {formatError && (
