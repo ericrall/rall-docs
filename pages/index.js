@@ -110,7 +110,7 @@ export default function Home() {
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 font-['Helvetica'] flex flex-col items-center">
       <div className="w-full max-w-[66ch] mx-auto flex flex-col items-center">
         <div className="w-full flex justify-center mb-8">
-          <h1 className="text-4xl font-light tracking-wide">Rall Docs.</h1>
+          <h1 className="text-4xl font-light tracking-wide select-none">Rall Docs.</h1>
         </div>
 
         {formatError && (
