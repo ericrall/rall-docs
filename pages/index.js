@@ -323,10 +323,10 @@ export default function Home() {
 
             <button
               onClick={handleFormat}
-              disabled={isFormatting || !value}
+              disabled={isFormatting}
               className={`enhance-button ${isFormatting ? 'dazzling' : ''}`}
             >
-              {isFormatting ? 'dazzling...' : 'dazzle'}
+              {isFormatting ? 'dazzle' : 'razzle'}
             </button>
           </>
         )}
