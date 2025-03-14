@@ -13,9 +13,13 @@ export default function Editor() {
 
   // Load saved content from localStorage when component mounts
   useEffect(() => {
-    const savedContent = localStorage.getItem('documentContent');
-    if (savedContent) {
-      setValue(savedContent);
+    try {
+      const savedContent = localStorage.getItem('documentContent');
+      if (savedContent) {
+        setValue(savedContent);
+      }
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
     }
     setIsLoading(false);
   }, []);
@@ -23,7 +27,11 @@ export default function Editor() {
   // Auto-save content to localStorage whenever it changes
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem('documentContent', value);
+      try {
+        localStorage.setItem('documentContent', value);
+      } catch (error) {
+        console.error('Error saving to localStorage:', error);
+      }
     }
   }, [value, isLoading]);
 
@@ -44,13 +52,17 @@ export default function Editor() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to format content');
+        throw new Error(data.error || data.details || 'Failed to format content');
+      }
+
+      if (!data.content || typeof data.content !== 'string') {
+        throw new Error('Invalid response format');
       }
 
       setValue(data.content);
     } catch (error) {
       console.error('Formatting error:', error);
-      setFormatError(error.message);
+      setFormatError(error.message || 'An unexpected error occurred');
     } finally {
       setIsFormatting(false);
     }

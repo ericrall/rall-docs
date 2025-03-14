@@ -22,18 +22,30 @@ Important: Use actual blank lines for spacing. Do not use markdown separators (*
 Always err on the side of more spacing rather than less.`;
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Extract content from request body
-    const { content } = req.body;
-
-    // Validate content
-    if (!content) {
-      return res.status(400).json({ error: 'Content is required' });
+    // Extract and validate content from request body
+    const { content } = req.body || {};
+    
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ 
+        error: 'Content is required and must be a string',
+        receivedContent: content
+      });
     }
 
     // Check for API key
@@ -42,8 +54,12 @@ export default async function handler(req, res) {
     }
 
     try {
-      // Call OpenAI API
-      const completion = await openai.chat.completions.create({
+      // Call OpenAI API with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 30000);
+      });
+
+      const completionPromise = openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
@@ -55,24 +71,37 @@ export default async function handler(req, res) {
             content: content
           }
         ],
-        temperature: 0.3, // Lower temperature for more consistent formatting
-        max_tokens: 2000, // Adjust based on your needs
+        temperature: 0.3,
+        max_tokens: 2000,
       });
 
-      // Extract the formatted content from the response
+      // Race between completion and timeout
+      const completion = await Promise.race([completionPromise, timeoutPromise]);
+
+      // Validate OpenAI response
+      if (!completion?.choices?.[0]?.message?.content) {
+        throw new Error('Invalid response from OpenAI');
+      }
+
       const formattedContent = completion.choices[0].message.content;
+
+      // Validate formatted content
+      if (typeof formattedContent !== 'string') {
+        throw new Error('Invalid formatted content received');
+      }
 
       // Return the formatted content
       return res.status(200).json({ 
         content: formattedContent,
-        usage: completion.usage
+        usage: completion.usage || {}
       });
 
     } catch (openaiError) {
       console.error('OpenAI API error:', openaiError);
-      return res.status(500).json({ 
+      return res.status(503).json({ 
         error: 'Error while formatting content',
-        details: openaiError.message 
+        details: openaiError.message,
+        type: 'openai_error'
       });
     }
 
@@ -81,7 +110,8 @@ export default async function handler(req, res) {
     console.error('Server error:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error.message 
+      details: error.message,
+      type: 'server_error'
     });
   }
 } 
