@@ -1,25 +1,24 @@
 import OpenAI from 'openai';
 
+// OpenAI API configuration
+const OPENAI_CONFIG = {
+  model: "gpt-4o-mini",  // Using gpt-4o-mini model
+  temperature: 0.3,
+  max_tokens: 2000
+};
+
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-// Formatting prompt for consistent results
-const FORMATTING_PROMPT = `
-Please improve the formatting and organization of the following text while preserving its meaning.
-Focus heavily on readability through proper spacing and structure.
+// Formatting prompt template
+const FORMAT_PROMPT = `
+Please improve the formatting of this text while preserving its meaning.
+Add appropriate spacing between paragraphs and sections.
+Use actual line breaks, not special characters.
 
-Key formatting requirements:
-1. Add blank lines between paragraphs
-2. Add blank lines between different topics or sections
-3. Add blank lines before and after headings
-4. Add blank lines before and after lists
-5. Keep text aligned and properly indented
-6. Preserve any existing formatting like bold, italic, or code blocks
-
-Important: Use actual blank lines for spacing. Do not use markdown separators (***) or other special characters for spacing.
-Always err on the side of more spacing rather than less.`;
+Text to format:`;
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -27,91 +26,79 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight request
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Extract and validate content from request body
     const { content } = req.body || {};
     
     if (!content || typeof content !== 'string') {
       return res.status(400).json({ 
-        error: 'Content is required and must be a string',
-        receivedContent: content
+        error: 'Invalid content',
+        details: 'Content must be a non-empty string'
       });
     }
 
-    // Check for API key
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: 'OpenAI API key is not configured' });
+      return res.status(500).json({ 
+        error: 'Configuration error',
+        details: 'OpenAI API key is missing'
+      });
     }
 
     try {
-      // Call OpenAI API with timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 30000);
-      });
-
-      const completionPromise = openai.chat.completions.create({
-        model: "gpt-4",
+      const completion = await openai.chat.completions.create({
+        ...OPENAI_CONFIG,
         messages: [
           {
-            role: "system",
-            content: FORMATTING_PROMPT
-          },
-          {
             role: "user",
-            content: content
+            content: `${FORMAT_PROMPT}\n\n${content}`
           }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
+        ]
       });
 
-      // Race between completion and timeout
-      const completion = await Promise.race([completionPromise, timeoutPromise]);
-
-      // Validate OpenAI response
       if (!completion?.choices?.[0]?.message?.content) {
-        throw new Error('Invalid response from OpenAI');
+        throw new Error('No content received from OpenAI');
       }
 
-      const formattedContent = completion.choices[0].message.content;
-
-      // Validate formatted content
-      if (typeof formattedContent !== 'string') {
-        throw new Error('Invalid formatted content received');
-      }
-
-      // Return the formatted content
       return res.status(200).json({ 
-        content: formattedContent,
-        usage: completion.usage || {}
+        content: completion.choices[0].message.content,
+        model: OPENAI_CONFIG.model
       });
 
     } catch (openaiError) {
-      console.error('OpenAI API error:', openaiError);
+      console.error('OpenAI Error:', openaiError);
+      
+      if (openaiError.name === 'AuthenticationError') {
+        return res.status(401).json({
+          error: 'Authentication failed',
+          details: 'Invalid OpenAI API key'
+        });
+      }
+      
+      if (openaiError.name === 'RateLimitError') {
+        return res.status(429).json({
+          error: 'Rate limit exceeded',
+          details: 'Too many requests to OpenAI API'
+        });
+      }
+
       return res.status(503).json({ 
-        error: 'Error while formatting content',
-        details: openaiError.message,
-        type: 'openai_error'
+        error: 'OpenAI service error',
+        details: openaiError.message
       });
     }
 
   } catch (error) {
-    // Handle any other errors
-    console.error('Server error:', error);
+    console.error('Server Error:', error);
     return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message,
-      type: 'server_error'
+      error: 'Server error',
+      details: error.message
     });
   }
 } 

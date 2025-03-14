@@ -41,6 +41,7 @@ export default function Editor() {
     setFormatError('');
 
     try {
+      console.log('Sending format request...');
       const response = await fetch('/api/format', {
         method: 'POST',
         headers: {
@@ -49,20 +50,35 @@ export default function Editor() {
         body: JSON.stringify({ content: value }),
       });
 
-      const data = await response.json();
+      console.log('Response received:', response.status);
+      let data;
+      
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Failed to parse server response');
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || 'Failed to format content');
+        console.error('Server error response:', data);
+        throw new Error(
+          data.details || data.error || 'Failed to format content'
+        );
       }
 
       if (!data.content || typeof data.content !== 'string') {
-        throw new Error('Invalid response format');
+        console.error('Invalid response format:', data);
+        throw new Error('Invalid response format from server');
       }
 
       setValue(data.content);
+      console.log('Formatting successful');
     } catch (error) {
       console.error('Formatting error:', error);
-      setFormatError(error.message || 'An unexpected error occurred');
+      setFormatError(
+        error.message || 'An unexpected error occurred while formatting'
+      );
     } finally {
       setIsFormatting(false);
     }
@@ -88,7 +104,8 @@ export default function Editor() {
 
         {formatError && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400">
-            {formatError}
+            <p className="font-medium">Error formatting document:</p>
+            <p className="mt-1">{formatError}</p>
           </div>
         )}
 
