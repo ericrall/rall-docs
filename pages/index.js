@@ -229,6 +229,25 @@ export default function Home() {
           z-index: 10;
         }
 
+        .enhance-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        @keyframes rainbow-bg {
+          0% { background: #60A5FA; }
+          20% { background: #818CF8; }
+          40% { background: #C084FC; }
+          60% { background: #F472B6; }
+          80% { background: #FB7185; }
+          100% { background: #60A5FA; }
+        }
+
+        .enhance-button.dazzling {
+          animation: rainbow-bg 2s linear infinite;
+          background-size: 200% auto;
+        }
+
         .ql-editor {
           min-height: clamp(300px, 70vh, 600px);
           background: var(--editor-bg);
@@ -305,7 +324,7 @@ export default function Home() {
             <button
               onClick={handleFormat}
               disabled={isFormatting || !value}
-              className="enhance-button"
+              className={`enhance-button ${isFormatting ? 'dazzling' : ''}`}
             >
               {isFormatting ? 'dazzling...' : 'dazzle'}
             </button>
