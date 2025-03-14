@@ -147,26 +147,62 @@ export default function Editor() {
                 max-width: 66ch;
                 margin: 0 auto;
                 line-height: 1.6;
+                border: none !important;
               }
               .ql-container {
-                border-bottom-left-radius: 0.375rem;
-                border-bottom-right-radius: 0.375rem;
+                border: none !important;
               }
               .ql-toolbar {
-                border-top-left-radius: 0.375rem;
-                border-top-right-radius: 0.375rem;
-                background: #f8fafc;
-                border-color: #e2e8f0;
+                border: none !important;
+                display: flex;
+                justify-content: center;
+                padding: 1rem 0;
+                background: transparent !important;
               }
-              .dark .ql-toolbar {
-                background: #1e293b;
-                border-color: #334155;
+              .ql-formats {
+                display: flex;
+                gap: 0.5rem;
               }
-              .dark .ql-container {
-                border-color: #334155;
+              .ql-toolbar button {
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 0.375rem;
+                transition: all 0.2s;
+              }
+              .ql-toolbar button:hover {
+                background: rgba(0, 0, 0, 0.05);
+              }
+              .dark .ql-toolbar button:hover {
+                background: rgba(255, 255, 255, 0.1);
+              }
+              .ql-toolbar button.ql-active {
+                background: rgba(0, 0, 0, 0.1);
+              }
+              .dark .ql-toolbar button.ql-active {
+                background: rgba(255, 255, 255, 0.2);
+              }
+              .ql-toolbar .ql-stroke {
+                stroke: currentColor;
+              }
+              .ql-toolbar .ql-fill {
+                fill: currentColor;
+              }
+              .dark .ql-toolbar .ql-stroke {
+                stroke: #e2e8f0;
+              }
+              .dark .ql-toolbar .ql-fill {
+                fill: #e2e8f0;
               }
               .dark .ql-editor {
                 color: #e2e8f0;
+              }
+              /* Remove default Quill styles */
+              .ql-snow * {
+                border: none !important;
+                box-shadow: none !important;
               }
             `}</style>
             <ReactQuill 
@@ -175,7 +211,7 @@ export default function Editor() {
               onChange={setValue}
               modules={modules}
               formats={formats}
-              className="bg-white dark:bg-gray-800 rounded-md shadow-sm"
+              className="bg-transparent"
             />
           </div>
         )}
