@@ -23,34 +23,64 @@ export default function Home() {
   const [isFormatting, setIsFormatting] = useState(false);
   const [formatError, setFormatError] = useState('');
   const [isAnimating, setIsAnimating] = useState(true);
-  const [visibleChars, setVisibleChars] = useState(0);
-  const [cursorPosition, setCursorPosition] = useState(0);
+  const [visibleChars, setVisibleChars] = useState([]);
+  const [scrambledText, setScrambledText] = useState([]);
 
   // Handle the typing animation
   useEffect(() => {
+    const text = 'rall docs.';
+    const chars = text.split('');
+    
     if (isAnimating) {
-      setVisibleChars(0);
-      setCursorPosition(0);
-      const text = 'Rall Docs.';
+      // Reset states with initial values
+      setVisibleChars(new Array(chars.length).fill(false));
+      setScrambledText(new Array(chars.length).fill(''));
+      
+      const scrambleChar = () => {
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+        return possible.charAt(Math.floor(Math.random() * possible.length));
+      };
+
       let currentChar = 0;
-
-      const typingInterval = setInterval(() => {
-        if (currentChar <= text.length) {
-          setCursorPosition(currentChar);
-          setVisibleChars(currentChar);
+      const revealNextChar = () => {
+        if (currentChar < chars.length) {
+          // Update both states synchronously
+          setVisibleChars(prev => {
+            const newVisible = [...prev];
+            newVisible[currentChar] = true;
+            return newVisible;
+          });
+          
+          setScrambledText(prev => {
+            const newScrambled = [...prev];
+            // Clear current character
+            newScrambled[currentChar] = '';
+            // Only scramble upcoming characters
+            for (let i = currentChar + 1; i < chars.length; i++) {
+              newScrambled[i] = scrambleChar();
+            }
+            return newScrambled;
+          });
+          
           currentChar++;
+          setTimeout(revealNextChar, 150);
         } else {
-          clearInterval(typingInterval);
-          setTimeout(() => {
-            setIsAnimating(false);
-            setCursorPosition(-1); // Hide cursor after animation
-          }, 500);
+          setIsAnimating(false);
+          setScrambledText(new Array(chars.length).fill(''));
         }
-      }, 100);
+      };
 
-      return () => clearInterval(typingInterval);
+      // Start the sequence
+      revealNextChar();
+
+      return () => {
+        // Cleanup
+        setVisibleChars(new Array(chars.length).fill(true));
+        setScrambledText(new Array(chars.length).fill(''));
+        setIsAnimating(false);
+      };
     }
-  }, [isAnimating]);
+  }, []); // Only run once on mount
 
   // Load saved content from localStorage when component mounts
   useEffect(() => {
@@ -105,7 +135,14 @@ export default function Home() {
         throw new Error('Invalid response format from server');
       }
 
-      setValue(data.content);
+      // Convert \n\n to proper line breaks for ReactQuill
+      const formattedContent = data.content
+        .replace(/\n\n/g, '</p><p><br></p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/^/, '<p>')
+        .replace(/$/, '</p>');
+
+      setValue(formattedContent);
     } catch (error) {
       setFormatError(error.message || 'An unexpected error occurred while formatting');
     } finally {
@@ -121,9 +158,11 @@ export default function Home() {
           --guide-color: #3b82f6;
           --editor-bg: #1E293B;
           --button-bg: #3b82f6;
-          --accent-glow: 0 0 20px rgba(59, 130, 246, 0.5);
-          --content-width: 66ch;
+          --content-width: min(90vw, 66ch);
+          --editor-padding: clamp(1rem, 5vw, 2rem);
         }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap');
 
         /* Global background */
         body {
@@ -131,16 +170,17 @@ export default function Home() {
           margin: 0;
           padding: 0;
           min-height: 100vh;
-          font-family: Helvetica, Arial, sans-serif;
+          font-family: Inter, Helvetica, Arial, sans-serif;
           color: white;
-          font-size: 18px;
+          font-size: clamp(16px, 4vw, 18px);
+          -webkit-text-size-adjust: 100%;
         }
 
-        /* Title animation styles */
+        /* Title styles */
         .logo-section {
           width: 100%;
           background: var(--title-bg);
-          padding: 2rem 0;
+          padding: clamp(1rem, 5vw, 2rem) 0;
           position: relative;
           display: flex;
           justify-content: center;
@@ -150,48 +190,34 @@ export default function Home() {
           width: var(--content-width);
           margin: 0 auto;
           text-align: center;
+          position: relative;
         }
-        .char {
-          display: inline-block;
-          opacity: 0;
-          transition: opacity 0.1s ease-out;
+        .logo {
+          font-family: 'Inter', sans-serif;
+          font-weight: 300;
+          letter-spacing: -0.03em;
           color: #fff;
-          text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
-        .char.visible {
-          opacity: 1;
-        }
-        .cursor {
-          position: absolute;
-          top: 0;
-          width: 2px;
-          height: 100%;
-          background-color: #3b82f6;
-          animation: blink 1s step-end infinite;
-          transition: transform 0.1s ease-out;
-          box-shadow: var(--accent-glow);
-          opacity: 0;
-        }
-        .cursor.visible {
-          opacity: 1;
+        .period {
+          color: #60A5FA;
         }
 
         /* Editor styles */
         .editor-container {
           width: var(--content-width);
           margin: 0 auto;
-          padding: 2rem 0;
+          padding: var(--editor-padding) 0;
           position: relative;
         }
 
         .enhance-button {
           position: absolute;
-          top: 2rem;
+          top: var(--editor-padding);
           left: 0;
           right: 0;
           width: 100%;
-          padding: 1.25rem;
-          font-size: 1.25rem;
+          padding: clamp(0.75rem, 3vw, 1.25rem);
+          font-size: clamp(1rem, 3vw, 1.25rem);
           font-weight: 500;
           text-align: center;
           border-radius: 12px;
@@ -200,29 +226,28 @@ export default function Home() {
           border: none;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: var(--accent-glow);
           z-index: 10;
         }
 
         .ql-editor {
-          min-height: 600px;
+          min-height: clamp(300px, 70vh, 600px);
           background: var(--editor-bg);
-          border-radius: 16px;
+          border-radius: clamp(8px, 3vw, 16px);
           color: #E2E8F0;
-          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-          font-size: 24px !important;  /* Set a large default size */
+          font-family: "Inter", sans-serif !important;
+          font-size: clamp(16px, 4vw, 24px) !important;
           line-height: 1.6;
-          padding: 5rem 2rem 2rem !important;
+          padding: clamp(3rem, 10vw, 5rem) var(--editor-padding) var(--editor-padding) !important;
           width: 100% !important;
-          max-width: 66ch !important;  /* Enforce 66 character width */
+          max-width: 100% !important;
           box-sizing: border-box !important;
           border: 1px solid rgba(59, 130, 246, 0.2);
-          box-shadow: var(--accent-glow);
-          margin: 0 auto;  /* Center the editor */
+          margin: 0 auto;
         }
 
         .ql-editor p {
           font-size: inherit !important;
+          font-family: inherit !important;
         }
 
         .ql-container {
@@ -234,29 +259,26 @@ export default function Home() {
         .ql-toolbar {
           display: none !important;
         }
+
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+          .error-message {
+            margin: 1rem;
+            padding: 1rem !important;
+            font-size: 0.9rem !important;
+          }
+          
+          .error-message p:first-child {
+            font-size: 1rem !important;
+          }
+        }
       `}</style>
 
       {/* Logo section */}
       <div className="logo-section">
         <div className="logo-container">
-          <h1 
-            className="text-7xl font-light tracking-wider select-none"
-            onMouseEnter={() => setIsAnimating(true)}
-          >
-            {'Rall Docs.'.split('').map((char, index) => (
-              <span
-                key={index}
-                className={`char ${index < visibleChars ? 'visible' : ''}`}
-              >
-                {char === ' ' ? '\u00A0' : char}
-              </span>
-            ))}
-            <span 
-              className={`cursor ${cursorPosition >= 0 ? 'visible' : ''}`}
-              style={{
-                transform: `translateX(${cursorPosition * 0.61}em)`
-              }}
-            />
+          <h1 className="logo text-4xl sm:text-5xl md:text-7xl select-none">
+            rall docs<span className="period">.</span>
           </h1>
         </div>
       </div>
@@ -285,7 +307,7 @@ export default function Home() {
               disabled={isFormatting || !value}
               className="enhance-button"
             >
-              {isFormatting ? 'Formatting...' : 'Format'}
+              {isFormatting ? 'dazzling...' : 'dazzle'}
             </button>
           </>
         )}

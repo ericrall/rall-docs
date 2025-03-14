@@ -48,7 +48,7 @@ export default async function handler(req, res) {
           messages: [
             {
               role: "system",
-              content: "You are a helpful assistant that formats text to be more readable while preserving its meaning. Format the text by fixing spacing around punctuation, ensuring proper capitalization, removing unnecessary whitespace, and fixing common typographical errors. Agressively add line breaks with extra line breaks to separate content logically. Only return the formatted text without any additional commentary except add Done at the end."
+              content: "You are a helpful assistant that formats text to be more readable while preserving its meaning. Format the text by fixing spacing around punctuation, ensuring proper capitalization, removing unnecessary whitespace, and fixing common typographical errors. Agressively add line breaks with extra line breaks to separate content logically. Only return the formatted text without any additional commentary."
             },
             {
               role: "user",
