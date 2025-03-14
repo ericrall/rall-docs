@@ -7,12 +7,7 @@ const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 // Custom Quill modules configuration
 const modules = {
-  toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline'],
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-    ['clean']
-  ]
+  toolbar: false  // Disable the toolbar
 };
 
 // Custom formats allowed in the editor
@@ -27,26 +22,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormatting, setIsFormatting] = useState(false);
   const [formatError, setFormatError] = useState('');
-  const [fontSize, setFontSize] = useState(16); // Default font size
   const [isAnimating, setIsAnimating] = useState(true);
   const [visibleChars, setVisibleChars] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
-
-  // Calculate font size based on content length
-  useEffect(() => {
-    if (value) {
-      const length = value.length;
-      let newSize;
-      if (length < 500) {
-        newSize = 18; // Larger font for shorter content
-      } else if (length < 2000) {
-        newSize = 16; // Medium font for moderate content
-      } else {
-        newSize = 14; // Smaller font for longer content
-      }
-      setFontSize(newSize);
-    }
-  }, [value]);
 
   // Handle the typing animation
   useEffect(() => {
@@ -65,6 +43,7 @@ export default function Home() {
           clearInterval(typingInterval);
           setTimeout(() => {
             setIsAnimating(false);
+            setCursorPosition(-1); // Hide cursor after animation
           }, 500);
         }
       }, 100);
@@ -135,177 +114,180 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 font-['Helvetica'] flex flex-col items-center">
-      <div className="w-full max-w-[66ch] mx-auto flex flex-col items-center">
-        <div className="w-full flex justify-center mb-32">
+    <div className="min-h-screen">
+      <style jsx global>{`
+        :root {
+          --title-bg: #0F172A;
+          --guide-color: #3b82f6;
+          --editor-bg: #1E293B;
+          --button-bg: #3b82f6;
+          --accent-glow: 0 0 20px rgba(59, 130, 246, 0.5);
+          --content-width: 66ch;
+        }
+
+        /* Global background */
+        body {
+          background-color: #000;
+          margin: 0;
+          padding: 0;
+          min-height: 100vh;
+          font-family: Helvetica, Arial, sans-serif;
+          color: white;
+          font-size: 18px;
+        }
+
+        /* Title animation styles */
+        .logo-section {
+          width: 100%;
+          background: var(--title-bg);
+          padding: 2rem 0;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .logo-container {
+          width: var(--content-width);
+          margin: 0 auto;
+          text-align: center;
+        }
+        .char {
+          display: inline-block;
+          opacity: 0;
+          transition: opacity 0.1s ease-out;
+          color: #fff;
+          text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        .char.visible {
+          opacity: 1;
+        }
+        .cursor {
+          position: absolute;
+          top: 0;
+          width: 2px;
+          height: 100%;
+          background-color: #3b82f6;
+          animation: blink 1s step-end infinite;
+          transition: transform 0.1s ease-out;
+          box-shadow: var(--accent-glow);
+          opacity: 0;
+        }
+        .cursor.visible {
+          opacity: 1;
+        }
+
+        /* Editor styles */
+        .editor-container {
+          width: var(--content-width);
+          margin: 0 auto;
+          padding: 2rem 0;
+          position: relative;
+        }
+
+        .enhance-button {
+          position: absolute;
+          top: 2rem;
+          left: 0;
+          right: 0;
+          width: 100%;
+          padding: 1.25rem;
+          font-size: 1.25rem;
+          font-weight: 500;
+          text-align: center;
+          border-radius: 12px;
+          background: var(--button-bg);
+          color: white;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: var(--accent-glow);
+          z-index: 10;
+        }
+
+        .ql-editor {
+          min-height: 600px;
+          background: var(--editor-bg);
+          border-radius: 16px;
+          color: #E2E8F0;
+          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+          font-size: 24px !important;  /* Set a large default size */
+          line-height: 1.6;
+          padding: 5rem 2rem 2rem !important;
+          width: 100% !important;
+          max-width: 66ch !important;  /* Enforce 66 character width */
+          box-sizing: border-box !important;
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          box-shadow: var(--accent-glow);
+          margin: 0 auto;  /* Center the editor */
+        }
+
+        .ql-editor p {
+          font-size: inherit !important;
+        }
+
+        .ql-container {
+          height: auto;
+          border: none !important;
+          font-family: inherit !important;
+        }
+
+        .ql-toolbar {
+          display: none !important;
+        }
+      `}</style>
+
+      {/* Logo section */}
+      <div className="logo-section">
+        <div className="logo-container">
           <h1 
-            className="text-4xl font-light tracking-wide select-none"
+            className="text-7xl font-light tracking-wider select-none"
             onMouseEnter={() => setIsAnimating(true)}
           >
-            <style jsx>{`
-              @keyframes blink {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0; }
-              }
-              .title-container {
-                position: relative;
-                display: inline-block;
-                padding: 0 1em;
-              }
-              .char {
-                display: inline-block;
-                opacity: 0;
-                transition: opacity 0.1s ease-out;
-              }
-              .char.visible {
-                opacity: 1;
-              }
-              .cursor {
-                position: absolute;
-                top: 0;
-                width: 2px;
-                height: 100%;
-                background-color: currentColor;
-                animation: blink 1s step-end infinite;
-                transition: transform 0.1s ease-out;
-              }
-            `}</style>
-            <span className="title-container">
-              {'Rall Docs.'.split('').map((char, index) => (
-                <span
-                  key={index}
-                  className={`char ${index < visibleChars ? 'visible' : ''}`}
-                >
-                  {char === ' ' ? '\u00A0' : char}
-                </span>
-              ))}
-              <span 
-                className="cursor"
-                style={{
-                  transform: `translateX(${cursorPosition * 0.61}em)`
-                }}
-              />
-            </span>
+            {'Rall Docs.'.split('').map((char, index) => (
+              <span
+                key={index}
+                className={`char ${index < visibleChars ? 'visible' : ''}`}
+              >
+                {char === ' ' ? '\u00A0' : char}
+              </span>
+            ))}
+            <span 
+              className={`cursor ${cursorPosition >= 0 ? 'visible' : ''}`}
+              style={{
+                transform: `translateX(${cursorPosition * 0.61}em)`
+              }}
+            />
           </h1>
         </div>
+      </div>
 
+      {/* Main content */}
+      <div className="editor-container">
         {formatError && (
-          <div className="w-full mb-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400">
-            <p className="font-medium">Error enhancing document:</p>
-            <p className="mt-1">{formatError}</p>
+          <div className="error-message mb-8 p-6 rounded-xl bg-red-500/20 border border-red-500/30" style={{ backdropFilter: 'blur(8px)' }}>
+            <p className="font-medium text-red-300 text-xl">Error enhancing document:</p>
+            <p className="mt-2 text-red-200 text-lg">{formatError}</p>
           </div>
         )}
 
         {!isLoading && (
-          <div 
-            className="prose dark:prose-invert max-w-none w-full"
-            style={{
-              '--editor-font-size': `${fontSize}px`,
-            }}
-          >
-            <style jsx global>{`
-              body {
-                font-family: Helvetica, sans-serif;
-              }
-              .ql-editor {
-                font-family: Helvetica, sans-serif;
-                font-size: var(--editor-font-size);
-                transition: font-size 0.3s ease;
-                padding: 2rem;
-                min-height: 500px;
-                max-width: 66ch;
-                margin: 0 auto;
-                line-height: 1.6;
-                border: none !important;
-                background: #1a2f1a !important;
-                border-radius: 0 0 8px 8px !important;
-              }
-              .ql-container {
-                font-family: Helvetica, sans-serif !important;
-                border: none !important;
-              }
-              .ql-toolbar {
-                font-family: Helvetica, sans-serif;
-                border: none !important;
-                display: flex;
-                justify-content: center;
-                padding: 1rem;
-                background: #234023 !important;
-                border-radius: 8px 8px 0 0 !important;
-              }
-              .ql-formats {
-                display: flex;
-                gap: 0.5rem;
-              }
-              .ql-toolbar button {
-                width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 0.375rem;
-                transition: all 0.2s;
-              }
-              .ql-toolbar button:hover {
-                background: rgba(255, 255, 255, 0.1);
-              }
-              .ql-toolbar button.ql-active {
-                background: rgba(255, 255, 255, 0.2);
-              }
-              .ql-toolbar .ql-stroke {
-                stroke: #e2e8f0;
-              }
-              .ql-toolbar .ql-fill {
-                fill: #e2e8f0;
-              }
-              .dark .ql-editor {
-                color: #e2e8f0;
-              }
-              /* Remove default Quill styles */
-              .ql-snow * {
-                border: none !important;
-                box-shadow: none !important;
-              }
-            `}</style>
+          <>
             <ReactQuill 
               theme="snow"
               value={value} 
               onChange={setValue}
               modules={modules}
               formats={formats}
-              className="bg-transparent mb-8"
             />
 
-            <div className="w-full flex justify-center">
-              <button
-                onClick={handleFormat}
-                disabled={isFormatting || !value}
-                className={`
-                  w-[66ch] flex items-center justify-center gap-2 px-6 py-4
-                  text-base font-medium tracking-wide
-                  transition-all duration-200
-                  border border-green-900 rounded-lg
-                  ${isFormatting || !value 
-                    ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                    : 'text-gray-300 hover:bg-green-900/50 active:bg-green-900'}
-                `}
-              >
-                <span className="relative">
-                  {isFormatting ? (
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
-                  )}
-                </span>
-                <span>{isFormatting ? 'Enhancing...' : 'Enhance'}</span>
-              </button>
-            </div>
-          </div>
+            <button
+              onClick={handleFormat}
+              disabled={isFormatting || !value}
+              className="enhance-button"
+            >
+              {isFormatting ? 'Formatting...' : 'Format'}
+            </button>
+          </>
         )}
       </div>
     </div>

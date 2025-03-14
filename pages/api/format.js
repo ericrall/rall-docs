@@ -14,9 +14,11 @@ const openai = new OpenAI({
 
 // Formatting prompt template
 const FORMAT_PROMPT = `
-Please improve the formatting of this text while preserving its meaning.
-Add appropriate spacing between paragraphs and sections.
-Use actual line breaks, not special characters.
+Please analyze the provided text and reformat it 
+by inserting new line breaks based on its structure and meaning. 
+Do not simply preserve the original line breaks. 
+Instead, create well-formed paragraphs and sections that logically separate ideas, 
+with blank lines between paragraphs as needed.
 
 Text to format:`;
 
